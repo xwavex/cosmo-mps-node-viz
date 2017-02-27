@@ -1,5 +1,6 @@
 *_gen
 *_gen.caches
 build/
+bin/
 vcs.xml
 workspace.xml
