@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!--title>Minimal D3 Example</title-->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<style>
+	label {
+	    font: 12px sans-serif;
+	}
+	.node circle {
+	    fill: #fff;
+	    stroke: steelblue;
+	    stroke-width: 1.5px;
+	}
+	.node {
+	    font: 10px sans-serif;
+	}
+	.link {
+	    fill: none;
+	    stroke: tan;
+	    stroke-width: 1.5px;
+	}
+
+	#container {
+	    position: absolute;
+	    width: 100%;
+	    height: 100%;
+	}
+
+	html,body {
+		position: absolute;
+	    width: 100%;
+	    height: 100%;
+	}
+</style>
+
+<!--div>
+<form>
+  <label><input type="radio" name="mode" value="radialtree">Radial Tree</label>
+  <label><input type="radio" name="mode" value="radialcluster">Radial Cluster</label>
+  <label><input type="radio" name="mode" value="tree">Tree</label>
+  <label><input type="radio" name="mode" value="cluster" checked>Cluster</label>
+</form>
+</div-->
+
+<div id="container" class="svg-container">
+</div>
+
+<script type="text/javascript">
+
+var margin = {
+	top: 50,
+    right: 150,
+    left: 150,
+    bottom: 50
+};
+
+var currentTanslationX = 0;
+var currentTanslationY = 0;
+var currentScale = 1;
+var wheelSpeed = 0.05;
+
+var lastMouseX = 0;
+var lastMouseY = 0;
+var lastScale = 1;
+
+var width = 500;// - margin.right - margin.left;
+var height = 500;// - margin.top - margin.bottom;
+width = parseInt(d3.select('#container').style('width'), 10);
+height = parseInt(d3.select('#container').style('height'), 10);
+
+var marginHeight = height - margin.top - margin.bottom;
+var marginWidth = width - margin.left - margin.right;
+
+var diameter = 0.7 * Math.min(width, height);
+var duration = 2000;
+var currentLayout = "cluster";
+
+//var viewWidth = 1000;
+//var viewHeight = 1000;
+
+//var viewerWidth = $(document).width();
+//var viewerHeight = $(document).height();
+
+
+d3.selectAll("input").on("change", change);
+// d3.selectAll("button").on("click", btn_click);
+
+// function btn_click() {
+// 	if (currentLayout == "radialtree") {
+// 		svg.attr("transform",
+// 		      "translate(" + (viewWidth/2) + "," +
+//                                           (viewHeight/2) + ")"
+// 		      + " scale(1)");
+// 	} else if (currentLayout == "radialcluster") {
+//         svg.attr("transform",
+// 		      "translate(" + (viewWidth/2) + "," +
+//                                           (viewHeight/2) + ")"
+// 		      + " scale(1)");
+// 	} else if (currentLayout == "tree") {
+// 		svg.attr("transform",
+//       "translate([0,0])"
+//       + " scale(1)");
+// 	} else if (currentLayout == "cluster") {
+// 		svg.attr("transform",
+//       "translate([0,0])"
+//       + " scale(1)");
+// 	}
+// }
+
+function change() {
+    if (this.value === "radialtree")
+        transitionToRadialTree();
+    else if (this.value === "radialcluster")
+        transitionToRadialCluster();
+    else if (this.value === "tree")
+        transitionToTree();
+    else
+        transitionToCluster();
+};
+
+function transitionToRadialTree() {
+	radialTree = d3.layout.tree()
+    .size([360, diameter / 2 ])
+    .separation(function(a, b) {
+        return (a.parent == b.parent ? 1 : 2) / a.depth;
+    });
+
+    currentLayout = "radialtree";
+    var nodes = radialTree.nodes(root), // recalculate layout
+        links = radialTree.links(nodes);
+
+    currentScale = 1;
+    svg.transition().duration(duration)
+        .attr("transform", "translate(" + (width/2) + "," +
+                                          (height/2) + ") scale(" + currentScale + ")");
+
+    currentTanslationX = (width/2);
+    currentTanslationY = (height/2);
+
+        // set appropriate translation (origin in middle of svg)
+
+    link.data(links)
+        .transition()
+        .duration(duration)
+        .style("stroke", function(d,i) {
+            if(d.target != null && d.target.languageref != null) {
+                return allData.languages[d.target.languageref].color;
+            }
+            return default_color;
+        } )
+        .attr("d", radialDiagonal); //get the new radial path
+
+    node.data(nodes)
+        .transition()
+        .duration(duration)
+        .attr("transform", function(d) {
+            return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")";
+        });
+
+    node.select("circle")
+        .transition()
+        .duration(duration)
+        .style("stroke", "#984ea3");
+
+    node.select("text")
+    	.transition()
+        .duration(duration)
+        .attr("transform", function(d) { return "rotate(" + (d.x < 180 ? 0 : -180) + ")"; })
+	    .attr("dy", ".31em")
+	    .attr("dx", function(d) {
+	      	if (!d.children) {
+	      		if (d.x > 180) {
+					return -this.getBBox().width - 20 + "px";
+				} else {
+					return 0 + "px";
+				}
+	      	} else {
+	      		if (d.x < 180) {
+					return -this.getBBox().width - 20 + "px";
+				} else {
+					return 0 + "px";
+				}
+			}
+		})
+
+};
+
+function updateRadialTree() {
+	radialTree = d3.layout.tree()
+    .size([360, diameter / 2 ])
+    .separation(function(a, b) {
+        return (a.parent == b.parent ? 1 : 2) / a.depth;
+    });
+
+    var nodes = radialTree.nodes(root), // recalculate layout
+        links = radialTree.links(nodes);
+
+    currentScale = 1;
+    svg.attr("transform", "translate(" + (width/2) + "," + (height/2) + ") scale(" + currentScale + ")");
+    currentTanslationX = (width/2);
+    currentTanslationY = (height/2);
+        // set appropriate translation (origin in middle of svg)
+
+    link.data(links)
+        .style("stroke", function(d,i) {
+            if(d.target != null && d.target.languageref != null) {
+                return allData.languages[d.target.languageref].color;
+            }
+            return default_color;
+        } )
+        .attr("d", radialDiagonal); //get the new radial path
+
+    node.data(nodes)
+        .attr("transform", function(d) {
+            return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")";
+        });
+
+    node.select("circle")
+        .style("stroke", "#984ea3");
+
+    node.select("text")
+        .attr("transform", function(d) { return "rotate(" + (d.x < 180 ? 0 : -180) + ")"; })
+	    .attr("dy", ".31em")
+	    .attr("dx", function(d) {
+	      	if (!d.children) {
+	      		if (d.x > 180) {
+					return -this.getBBox().width - 20 + "px";
+				} else {
+					return 0 + "px";
+				}
+	      	} else {
+	      		if (d.x < 180) {
+					return -this.getBBox().width - 20 + "px";
+				} else {
+					return 0 + "px";
+				}
+			}
+		})
+};
+
+function transitionToRadialCluster() {
+	radialCluster = d3.layout.cluster()
+    .size([360, diameter / 2 ])
+    .separation(function(a, b) {
+        return (a.parent == b.parent ? 1 : 2) / a.depth;
+    });
+
+	currentLayout = "radialcluster";
+    var nodes = radialCluster.nodes(root), // recalculate layout
+        links = radialCluster.links(nodes);
+
+    currentScale = 1;
+    svg.transition().duration(duration)
+        .attr("transform", "translate(" + (width/2) + "," +
+                                          (height/2) + ") scale(" + currentScale + ")");
+    currentTanslationX = (width/2);
+    currentTanslationY = (height/2);
+        // set appropriate translation (origin in middle of svg)
+
+    link.data(links)
+        .transition()
+        .duration(duration)
+        .style("stroke", function(d,i) {
+            if(d.target != null && d.target.languageref != null) {
+                return allData.languages[d.target.languageref].color;
+            }
+            return default_color;
+        } )
+        .attr("d", radialDiagonal); //get the new radial path
+
+    node.data(nodes)
+        .transition()
+        .duration(duration)
+        .attr("transform", function(d) {
+            return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")";
+        });
+
+    node.select("circle")
+        .transition()
+        .duration(duration)
+        .style("stroke", "#4daf4a");
+
+    node.select("text")
+    	.transition()
+        .duration(duration)
+        .attr("transform", function(d) { return "rotate(" + (d.x < 180 ? 0 : -180) + ")"; })
+	    .attr("dy", ".31em")
+	    .attr("dx", function(d) {
+	      	if (!d.children) {
+	      		if (d.x > 180) {
+					return -this.getBBox().width - 20 + "px";
+				} else {
+					return 0 + "px";
+				}
+	      	} else {
+	      		if (d.x < 180) {
+					return -this.getBBox().width - 20 + "px";
+				} else {
+					return 0 + "px";
+				}
+			}
+		})
+
+};
+
+function updateRadialCluster() {
+	radialCluster = d3.layout.cluster()
+    .size([360, diameter / 2 ])
+    .separation(function(a, b) {
+        return (a.parent == b.parent ? 1 : 2) / a.depth;
+    });
+
+    var nodes = radialCluster.nodes(root), // recalculate layout
+        links = radialCluster.links(nodes);
+
+    currentScale = 1;
+    svg.attr("transform", "translate(" + (width/2) + "," +
+                                          (height/2) + ") scale(" + currentScale + ")");
+    currentTanslationX = (width/2);
+    currentTanslationY = (height/2);
+
+        // set appropriate translation (origin in middle of svg)
+
+    link.data(links)
+        .style("stroke", function(d,i) {
+            if(d.target != null && d.target.languageref != null) {
+                return allData.languages[d.target.languageref].color;
+            }
+            return default_color;
+        } )
+        .attr("d", radialDiagonal); //get the new radial path
+
+    node.data(nodes)
+        .attr("transform", function(d) {
+            return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")";
+        });
+
+    node.select("circle")
+        .style("stroke", "#4daf4a");
+
+    node.select("text")
+        .attr("transform", function(d) { return "rotate(" + (d.x < 180 ? 0 : -180) + ")"; })
+	    .attr("dy", ".31em")
+	    .attr("dx", function(d) {
+	      	if (!d.children) {
+	      		if (d.x > 180) {
+					return -this.getBBox().width - 20 + "px";
+				} else {
+					return 0 + "px";
+				}
+	      	} else {
+	      		if (d.x < 180) {
+					return -this.getBBox().width - 20 + "px";
+				} else {
+					return 0 + "px";
+				}
+			}
+		})
+
+};
+
+function transitionToTree() {
+	tree = d3.layout.tree()
+    .size([marginHeight, marginWidth]);
+
+    currentLayout = "tree";
+    var nodes = tree.nodes(root), //recalculate layout
+        links = tree.links(nodes);
+
+	currentScale = 1;
+    svg.transition().duration(duration)
+        .attr("transform", "translate(" + [margin.left, margin.top] + ") scale(" + currentScale + ")");
+    currentTanslationX = margin.left;
+    currentTanslationY = margin.top;
+
+    link.data(links)
+        .transition()
+        .duration(duration)
+        .style("stroke", function(d,i) {
+            if(d.target != null && d.target.languageref != null) {
+                return allData.languages[d.target.languageref].color;
+            }
+            return default_color;
+        } )
+        .attr("d", diagonal); // get the new tree path
+
+    node.data(nodes)
+        .transition()
+        .duration(duration)
+        .attr("transform", function (d) {
+            return "translate(" + d.y + "," + d.x + ")";
+        });
+
+    node.select("circle")
+        .transition()
+        .duration(duration)
+        .style("stroke", "#377eb8");
+
+    node.select("text")
+    	.transition()
+        .duration(duration)
+        .attr("transform", function(d) { return "rotate(0)"; })
+	    .attr("dy", ".31em")
+	    .attr("dx", function(d) {
+	      	if (!d.children) {
+	      		return 0;
+	      	} else {
+				return -this.getBBox().width - 20 + "px";
+			}
+		})
+};
+
+function updateTree() {
+	tree = d3.layout.tree()
+    .size([marginHeight, marginWidth]);
+
+    var nodes = tree.nodes(root), //recalculate layout
+        links = tree.links(nodes);
+
+    currentScale = 1;
+    svg.attr("transform", "translate(" + [margin.left, margin.top] + ") scale(" + currentScale + ")");
+    currentTanslationX = margin.left;
+    currentTanslationY = margin.top;
+
+    link.data(links)
+        .style("stroke", function(d,i) {
+            if(d.target != null && d.target.languageref != null) {
+                return allData.languages[d.target.languageref].color;
+            }
+            return default_color;
+        } )
+        .attr("d", diagonal); // get the new tree path
+
+    node.data(nodes)
+        .attr("transform", function (d) {
+            return "translate(" + d.y + "," + d.x + ")";
+        });
+
+    node.select("circle")
+        .style("stroke", "#377eb8");
+
+    node.select("text")
+        .attr("transform", function(d) { return "rotate(0)"; })
+	    .attr("dy", ".31em")
+	    .attr("dx", function(d) {
+	      	if (!d.children) {
+	      		return 0;
+	      	} else {
+				return -this.getBBox().width - 20 + "px";
+			}
+		})
+};
+
+function transitionToCluster() {
+	cluster = d3.layout.cluster()
+    .size([marginHeight, marginWidth]);
+
+    currentLayout = "cluster";
+    var nodes = cluster.nodes(root), //recalculate layout
+        links = cluster.links(nodes);
+
+    currentScale = 1;
+    svg.transition().duration(duration)
+        .attr("transform", "translate(" + [margin.left, margin.top] + ") scale(" + currentScale + ")");
+    currentTanslationX = margin.left;
+    currentTanslationY = margin.top;
+
+    link.data(links)
+        .transition()
+        .duration(duration)
+        .style("stroke", function(d,i) {
+            if(d.target != null && d.target.languageref != null) {
+                return allData.languages[d.target.languageref].color;
+            }
+            return default_color;
+        } )
+        .attr("d", diagonal); //get the new cluster path
+
+    node.data(nodes)
+        .transition()
+        .duration(duration)
+        .attr("transform", function (d) {
+            return "translate(" + d.y + "," + d.x + ")";
+        });
+
+    node.select("circle")
+        .transition()
+        .duration(duration)
+        .style("stroke", "#e41a1c");
+
+
+    var text = node.select("text")
+    	.transition()
+        .duration(duration)
+        .attr("transform", function(d) { return "rotate(0)"; })
+	    .attr("dy", ".31em")
+		.attr("dx", function(d) {
+	      	if (!d.children) {
+	      		return 0;
+	      	} else {
+				return -this.getBBox().width - 20 + "px";
+			}
+		})
+
+
+};
+
+function updateCluster() {
+	cluster = d3.layout.cluster()
+    .size([marginHeight, marginWidth]);
+
+    var nodes = cluster.nodes(root), //recalculate layout
+        links = cluster.links(nodes);
+
+	currentScale = 1;
+    svg.attr("transform", "translate(" + [margin.left, margin.top] + ") scale(" + currentScale + ")");
+    currentTanslationX = margin.left;
+    currentTanslationY = margin.top;
+
+    link.data(links)
+        .style("stroke", function(d,i) {
+            if(d.target != null && d.target.languageref != null) {
+                return allData.languages[d.target.languageref].color;
+            }
+            return default_color;
+        } )
+        .attr("d", diagonal); //get the new cluster path
+
+    node.data(nodes)
+        .attr("transform", function (d) {
+            return "translate(" + d.y + "," + d.x + ")";
+        });
+
+    node.select("circle")
+        .style("stroke", "#e41a1c");
+
+
+    var text = node.select("text")
+        .attr("transform", function(d) { return "rotate(0)"; })
+	    .attr("dy", ".31em")
+		.attr("dx", function(d) {
+	      	if (!d.children) {
+	      		return 0;
+	      	} else {
+				return -this.getBBox().width - 20 + "px";
+			}
+		})
+};
+
+var root; // store data in a variable accessible by all functions
+
+var tree = d3.layout.tree()
+    .size([marginHeight, marginWidth]);
+
+var cluster = d3.layout.cluster()
+    .size([marginHeight, marginWidth]);
+
+var diagonal = d3.svg.diagonal()
+    .projection(function (d) {
+    return [d.y, d.x];
+});
+
+var radialTree = d3.layout.tree()
+    .size([360, diameter / 2 ])
+    .separation(function(a, b) {
+        return (a.parent == b.parent ? 1 : 2) / a.depth;
+    });
+
+var radialCluster = d3.layout.cluster()
+    .size([360, diameter / 2 ])
+    .separation(function(a, b) {
+        return (a.parent == b.parent ? 1 : 2) / a.depth;
+    });
+
+var radialDiagonal = d3.svg.diagonal.radial()
+    .projection(function(d) {
+        return [d.y, d.x / 180 * Math.PI];
+    });
+
+var svgParent = d3.select("div#container").append("svg")
+	.classed("graph", true)
+	.attr("width", width)
+    .attr("height", height)
+    //
+    .call(zm = d3.behavior.zoom().scaleExtent([0.1,3]).on("zoom", redraw));
+
+var svg = svgParent.append("g")
+   .attr('height', (height) + 'px')
+   .attr('width', (width) + 'px')
+   .style('height', (height) + 'px')
+   .style('width', (width) + 'px')
+   .attr('transform', 'translate(' + [margin.left, margin.top] + ')');
+
+currentTanslationX = margin.left;
+currentTanslationY = margin.top;
+
+//svg.append("rect")
+//    .attr("width", "100%")
+//    .attr("height", "100%")
+//    .attr("fill", "pink");
+
+
+var i = 0;
+var default_color = "#555555";
+
+    var allData = getData();
+    var root = allData.data,
+        nodes = cluster.nodes(root),
+        links = cluster.links(nodes);
+
+    var link = svg.selectAll(".link")
+        .data(links)
+        .enter()
+        .append("path")
+        .attr("class", "link")
+        .style("stroke", function(d,i) {
+            if(d.target != null && d.target.languageref != null) {
+                return allData.languages[d.target.languageref].color;
+            }
+            return default_color;
+        } )
+        .attr("d", diagonal);
+
+    var node = svg.selectAll(".node")
+        //.data(nodes, function(d) { return d.id || (d.id = ++i); })
+        .data(nodes)
+        .enter()
+        .append("g")
+        .on("click", click)
+        .attr("class", "node")
+        .attr("transform", function (d) {
+        	return "translate(" + d.y + "," + d.x + ")";
+    	})
+
+    node.append("circle")
+        .attr("r", 4.5)
+        .style("stroke", "#e41a1c");
+        //.style("fill", function(d) { return "00000" + d.languageref });
+
+	var text = node.append("text")
+	      .attr("transform", function(d) { return "rotate(0)"; })
+	      .attr("dy", ".31em")
+	      .attr("x", function(d) { return !d.children ? 10 : 10; })
+	      .style("text-anchor", "start")
+	      .text(function(d) { return d.name; });
+
+	//var bbox = text.node().getBBox();
+
+	text.attr("dx", function(d) {
+      	if (!d.children) {
+      		return 0;
+      	} else {
+			return -this.getBBox().width - 20 + "px";
+		}
+	})
+
+function getData() {
+	return __placeholder_data__
+}
+
+function getTestData() {
+    return {
+        "title": "Language Graph Viz",
+        "languages": {
+            "L1": {
+                "color": "#FF3300"
+            },
+            "L2": {
+                "color": "#0033FF"
+            }
+        },
+        "data": {
+            "name": "flaredsfdsfdsfdsfdsfdsfsdfds",
+            "languageref": "L1",
+            "children": [{
+            "name": "analytics",
+                "children": [{
+                "name": "cluster",
+                    "children": []
+            }, {
+                "name": "graph",
+                "languageref": "L1",
+                    "children": [{
+                    "name": "BetweennessCentrality",
+                    "languageref": "L1",
+                    "size": 3534
+                }, {
+                    "name": "LinkDistance",
+                    "languageref": "L1",
+                    "size": 5731
+                }, {
+                    "name": "MaxFlowMinCut",
+                    "languageref": "L1",
+                    "size": 7840
+                }, {
+                    "name": "ShortestPaths",
+                    "languageref": "L2",
+                    "size": 5914
+                }, {
+                    "name": "SpanningTree",
+                    "languageref": "L2",
+                    "size": 3416
+                }]
+            }, {
+                "name": "optimization",
+                "languageref": "L2",
+                    "children": [{
+                    "name": "AspectRatioBanker",
+                    "size": 7074
+                }]
+            }]
+        }, {
+            "name": "animate",
+                "children": [{
+                "name": "interpolate",
+                    "children": [{
+                    "name": "ArrayInterpolator",
+                    "size": 1983
+                }, {
+                    "name": "ColorInterpolator",
+                    "size": 2047
+                }, {
+                    "name": "DateInterpolator",
+                    "size": 1375
+                }, {
+                    "name": "Interpolator",
+                    "size": 8746
+                }, {
+                    "name": "MatrixInterpolator",
+                    "size": 2202
+                }, {
+                    "name": "NumberInterpolator",
+                    "size": 1382
+                }, {
+                    "name": "ObjectInterpolator",
+                    "size": 1629
+                }, {
+                    "name": "PointInterpolator",
+                    "size": 1675
+                }, {
+                    "name": "RectangleInterpolator",
+                    "size": 2042
+                }]
+            }, {
+                "name": "ISchedulable",
+                "size": 1041
+            }, {
+                "name": "Parallel",
+                "size": 5176
+            }, {
+                "name": "Pause",
+                "size": 449
+            }, {
+                "name": "Scheduler",
+                "size": 5593
+            }, {
+                "name": "Sequence",
+                "size": 5534
+            }, {
+                "name": "Transition",
+                "size": 9201
+            }, {
+                "name": "Transitioner",
+                "size": 19975
+            }, {
+                "name": "TransitionEvent",
+                "size": 1116
+            }, {
+                "name": "Tween",
+                "size": 6006
+            }]
+        }, {
+            "name": "data",
+                "children": [{
+                "name": "converters",
+                    "children": [{
+                    "name": "Converters",
+                    "size": 721
+                }, {
+                    "name": "DelimitedTextConverter",
+                    "size": 4294
+                }, {
+                    "name": "GraphMLConverter",
+                    "size": 9800
+                }, {
+                    "name": "IDataConverter",
+                    "size": 1314
+                }, {
+                    "name": "JSONConverter",
+                    "size": 2220
+                }]
+            }, {
+                "name": "DataField",
+                "size": 1759
+            }, {
+                "name": "DataSchema",
+                "size": 2165
+            }, {
+                "name": "DataSet",
+                "size": 586
+            }, {
+                "name": "DataSource",
+                "size": 3331
+            }, {
+                "name": "DataTable",
+                "size": 772
+            }, {
+                "name": "DataUtil",
+                "size": 3322
+            }]
+        }]
+    }
+  };
+}
+
+// resize
+d3.select(window).on('resize', resize);
+
+function resize() {
+	// update width
+    width = parseInt(d3.select('#container').style('width'), 10);
+    height = parseInt(d3.select('#container').style('height'), 10);
+	diameter = 0.7 * Math.min(height, width);
+	marginHeight = height - margin.top - margin.bottom;
+	marginWidth = width - margin.left - margin.right;
+
+    svgParent.attr('height', (height) + 'px')
+       .attr('width', (width) + 'px');
+
+   svg.attr('height', (height) + 'px')
+   .attr('width', (width) + 'px');
+
+   svg.style('height', (height) + 'px')
+   .style('width', (width) + 'px');
+
+	if (currentLayout == "radialtree")
+        updateRadialTree();
+    else if (currentLayout == "radialcluster")
+        updateRadialCluster();
+    else if (currentLayout == "tree")
+        updateTree();
+    else {
+        updateCluster();
+    }
+}
+
+// Toggle children on click.
+function click(d) {
+	// console.log("blaaa");
+ //  if (d.children) {
+ //    d._children = d.children;
+ //    d.children = null;
+ //  } else {
+ //    d.children = d._children;
+ //    d._children = null;
+ //  }
+
+ //  //update(d);
+}
+
+//Redraw for zoom
+function redraw() {
+
+}
+
+
+var mouseRefX = 0;
+var mouseRefY = 0;
+var curDown = false;
+
+window.addEventListener('mousedown', function(e){ curDown = true; mouseRefY = e.pageY; mouseRefX = e.pageX; });
+
+window.addEventListener('mouseup', function(e){ curDown = false; });
+
+window.addEventListener('mousemove', function(e){
+  if(curDown === true){
+  	var dMX = e.pageX - mouseRefX;
+	var dMY = e.pageY - mouseRefY;
+
+	mouseRefX = e.pageX;
+	mouseRefY = e.pageY;
+
+	svg.attr("transform",
+	      "translate(" + [currentTanslationX + dMX, currentTanslationY + dMY] + ")"
+	      + " scale(" + currentScale + ")");
+
+	currentTanslationX = currentTanslationX + dMX;
+	currentTanslationY = currentTanslationY + dMY;
+  }
+});
+
+var mousewheelevt=(/Firefox/i.test(navigator.userAgent))? "DOMMouseScroll" : "mousewheel" //FF doesn't recognize mousewheel as of FF3.x
+
+if (document.attachEvent) //if IE (and Opera depending on user setting)
+    document.attachEvent("on"+mousewheelevt, function(e){
+    	mouseWheel(e);
+    })
+else if (document.addEventListener) //WC3 browsers
+    document.addEventListener(mousewheelevt, function(e){
+    	mouseWheel(e);
+    }, false)
+
+
+function mouseWheel(e) {
+	var dSC = 0;
+	if (e.deltaY > 0) {
+		dSC = currentScale - wheelSpeed;
+	} else if (e.deltaY < 0) {
+		dSC = currentScale + wheelSpeed;
+	}
+	if (dSC < 0.1) {
+		dSC = 0.1;
+	} else if (dSC > 3.0) {
+		dSC + 3.0;
+	}
+	currentScale = dSC;
+
+	svg.attr("transform",
+	      "translate(" + [currentTanslationX, currentTanslationY] + ")"
+	      + " scale(" + currentScale + ")");
+}
+
+</script>
+
+</body>
+</html>
