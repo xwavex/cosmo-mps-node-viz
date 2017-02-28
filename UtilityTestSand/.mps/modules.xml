@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="MPSProject">
-    <projectModules>
-      <modulePath path="$PROJECT_DIR$/languages/UtilityTestSand/UtilityTestSand.mpl" folder="" />
-      <modulePath path="$PROJECT_DIR$/languages/UtilityTestSand/sandbox/UtilityTestSand.sandbox.msd" folder="" />
-    </projectModules>
-  </component>
-</project>
